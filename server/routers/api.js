@@ -1,6 +1,8 @@
 let express = require('express')
 let router = express.Router()
 let User = require('../models/User')
+let Category = require('../models/Category')
+let Content = require('../models/Content')
 
 // 统一返回格式
 let responseData
@@ -103,6 +105,101 @@ router.get('/user/logout', function (req, res, next) {
   responseData.message = '你还没有登录'
   responseData.userInfo = null
   return res.json(responseData)
+})
+
+router.get('/category', function (req, res) {
+  Category.find().then(function (categories) {
+    responseData.categories = categories
+    res.json(responseData)
+  })
+  return
+})
+
+router.get('/content/editViews', function (req, res) {
+  let contentId = req.query.contentId
+  Content.findByIdAndUpdate(contentId, {$inc:{views: 1}}, function (err, doc){
+    if(err) {
+      console.log('editViewsError', err)
+    }
+    return
+  })
+  return
+})
+
+router.get('/content', function (req, res) {
+  let page = Number(req.query.page || 1)
+  let categoryId = req.query.categoryId
+  let limit = 5
+  let filter = {}
+  if (categoryId) {
+    // filter里面的过滤内容一定要和表结构里面的内容一致才可以
+    filter.category = categoryId
+    Content.find().where(filter).populate(['category', 'user'])
+    .sort({addTime: -1}).then(function (contents) {
+      let pages = Math.ceil((contents.length)/limit)
+      page = Math.max(page, 1)
+      page = Math.min(page, pages)
+      let skip = (page - 1) * limit
+      responseData.contents = contents.slice(skip, skip+limit)
+      responseData.page = page
+      responseData.pages = pages
+      res.json(responseData)
+    })
+  } else {
+    Content.count().then(function (count) {
+      let pages = Math.ceil(count/limit)
+      page = Math.max(page, 1)
+      page = Math.min(page, pages)
+      let skip = (page - 1) * limit
+      Content.find().limit(limit).skip(skip).where(filter)
+      .populate(['category', 'user']).sort({addTime: -1})
+      .then(function (contents) {
+        responseData.page = page
+        responseData.pages = pages
+        responseData.contents = contents
+        res.json(responseData)
+      })
+    })
+  } 
+  return
+})
+
+router.get('/detail', function (req, res) {
+  let contentId = req.query.contentId
+  Content.findById(contentId).populate('user').then(function (content) {
+    responseData.content = content
+    res.json(responseData)
+  })
+  return
+})
+
+router.get('/comment', function (req, res) {
+  let contentId = req.query.contentId
+  Content.findOne({
+    _id: contentId
+  }).then(function (content) {
+    responseData.comments = content.comments.sort({postTime: -1})
+    res.json(responseData)
+  })
+})
+
+router.post('/comment/post', function (req, res) {
+  let contentId = req.body.contentId || ''
+  let username = req.userInfo.username || '匿名用户'
+  let postData = {
+    username: username,
+    postTime: new Date(),
+    statement: req.body.statement
+  }
+  Content.findOne({
+    _id: contentId
+  }).then(function (content) {
+    content.comments.push(postData)
+    return content.save()
+  }).then(function (content) {
+    responseData.comments = content.comments.sort({postTime: -1})
+    res.json(responseData)
+  })
 })
 
 /* 用户退出 --end*/

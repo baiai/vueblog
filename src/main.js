@@ -2,8 +2,10 @@
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import App from './App'
+import store from './store/store'
 import router from './router'
 import Axios from 'axios'
+import '@/assets/icon/iconfont.css'
 
 Vue.config.productionTip = false
 Vue.prototype.$axios = Axios
@@ -14,6 +16,7 @@ Axios.defaults.withCredentials = true
 new Vue({
   el: '#app',
   router,
+  store,
   components: { App },
   template: '<App/>'
 })

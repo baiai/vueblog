@@ -4,13 +4,11 @@
       <content-list :contents="contents"></content-list>
     </div>
     <Pagigation @next-page="clickNext" @pre-page="clickPre" :pages="pages" :page="page" :url="url"></Pagigation>
-    <State class="log-aside"></State>
   </div>
 </template>
 <script type="text/javascript">
 import ContentList from './ContentList'
 import Pagigation from '../Pagigation'
-import State from './State'
 import dayjs from 'dayjs'
 export default {
   data () {
@@ -18,18 +16,23 @@ export default {
       contents: [],
       page: 0,
       pages: 0,
-      url: '/api/content?page='
+      url: this.$store.getters.contentPath + '&page='
     }
   },
   created () {
-    this.$axios.get('/api/content').then((res) => {
+    this.$axios.get(this.$store.getters.contentPath).then((res) => {
       res.data.contents.forEach((content) => {
         content.addTime = dayjs(content.addTime).format('YYYY-MM-DD HH:mm:ss')
       })
+      this.contents = res.data.contents
       this.page = res.data.page
       this.pages = res.data.pages
-      this.contents = res.data.contents
     })
+  },
+  computed: {
+    path () {
+      return this.$store.getters.contentPath
+    }
   },
   methods: {
     clickNext (resData) {
@@ -51,8 +54,19 @@ export default {
   },
   components: {
     ContentList,
-    Pagigation,
-    State
+    Pagigation
+  },
+  watch: {
+    path: function (newPath, oldPath) {
+      this.$axios.get(newPath).then((res) => {
+        res.data.contents.forEach((content) => {
+          content.addTime = dayjs(content.addTime).format('YYYY-MM-DD HH:mm:ss')
+        })
+        this.contents = res.data.contents
+        this.page = res.data.page
+        this.pages = res.data.pages
+      })
+    }
   }
 }
 </script>
@@ -60,8 +74,37 @@ export default {
 @import '~@/assets/css/mixins.styl'
 .main-container
   padding 70px 300px 0 100px
-.log-aside
-  position absolute
-  top 100px
-  right 20px
+  .content-wrapper
+    display block
+    .content
+      padding 0
+      .content-list
+        padding-bottom 10px
+        list-style none
+        color #666
+        border-bottom 1px solid #eee
+        .title
+          font-size 20px
+          height 45px
+          line-height 45px
+          &:hover
+            color #28a745
+        .description
+          height 25px
+          line-height 25px
+          color #aaa
+          ellipsis()
+        .content-detail
+          height 50px
+          line-height 50px
+          ellipsis()
+        .param
+          font-size 12px
+          display flex
+          .placeholder
+            flex 1
+          .add-time
+            margin-right 25px
+          .views
+            margin-right 10px
 </style>
